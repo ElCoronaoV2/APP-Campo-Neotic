@@ -154,7 +154,7 @@ function buscarSocio(numSocio, pin) {
       };
       if (pin !== undefined) {
         const stored = String(data[i][2] || '');
-        socio.pin_ok = (stored !== "" && stored === pin);
+        socio.pin_ok = stored === '' ? false : (stored === pin || stored === Utilities.computeDigest(...));
       }
       return jsonResponse({ socio: socio });
     }
