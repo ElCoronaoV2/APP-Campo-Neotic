@@ -1,0 +1,38 @@
+name: voz_campo
+description: "App móvil de toma de datos por voz con normalización inteligente para entornos agrícolas."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.2.0
+  permission_handler: ^11.3.1
+  string_similarity: ^2.0.0
+  sqflite: ^2.4.1
+  shared_preferences: ^2.3.3
+  path_provider: ^2.1.5
+  path: ^1.9.0
+  http: ^1.2.2
+  connectivity_plus: ^6.1.2
+  geolocator: ^13.0.2
+  flutter_spinkit: ^5.2.1
+  crypto: ^3.0.5
+  intl: ^0.19.0
+  uuid: ^4.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/data/municipios.json

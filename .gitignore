@@ -1,0 +1,36 @@
+# Flutter / Dart
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/build/
+app/.idea/
+app/.vscode/
+app/android/.gradle/
+app/android/local.properties
+app/android/app/debug/
+app/android/app/profile/
+app/android/app/release/
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Flutter/Flutter.framework
+app/ios/Flutter/Flutter.podspec
+
+# Apps Script
+app/variables.gs.json
+app/*.json.gs
+
+# Editor
+*~
+*.swp
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Datos del usuario (NO se commitea)
+municipios_espana.json
+
+# Mantener municipios.json generado (es un asset del APK)
+!app/assets/data/municipios.json
