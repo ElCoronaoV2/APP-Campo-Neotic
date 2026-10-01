@@ -34,3 +34,6 @@ municipios_espana.json
 
 # Mantener municipios.json generado (es un asset del APK)
 !app/assets/data/municipios.json
+
+# Backups
+*.bak
