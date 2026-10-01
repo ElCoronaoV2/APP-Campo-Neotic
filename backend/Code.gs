@@ -22,8 +22,8 @@
 // CONFIGURACIÓN - EDITAR ANTES DE DESPLEGAR
 // ============================================================
 
-const SHEET_ID = 'PEGAR_AQUI_EL_ID_DE_LA_GOOGLE_SHEET';
-const API_TOKEN = 'CAMBIAR_POR_TOKEN_SEGURO_DE_32_CHARS_MIN';
+const SHEET_ID = '1mC-nV6IelemZDPMZZaGzq6nhoJei5tqnHKnUXJVDk5c';
+const API_TOKEN = '458bc7cef5e97c6b5681c7ede1c0a33131ba3ed15b98354837952babaff120ca';
 
 // ============================================================
 
