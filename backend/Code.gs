@@ -42,6 +42,8 @@ function doPost(e) {
     switch (op) {
       case 'crear_registro':
         return crearRegistro(body);
+      case 'crear_socio':
+        return crearSocio(body);
       default:
         return jsonResponse({ error: 'unknown_op', op: op }, 400);
     }
@@ -183,6 +185,64 @@ function listarFincas(numSocio) {
     }
   }
   return jsonResponse({ fincas: fincas });
+}
+
+function crearSocio(body) {
+  Logger.log('crearSocio INICIO body=' + JSON.stringify(body));
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    let sheet = ss.getSheetByName('Socios');
+
+    Logger.log('sheet tras getByName: ' + (sheet ? sheet.getName() : 'NULL'));
+
+    // Auto-crear pestaña si no existe
+    if (!sheet) {
+      sheet = ss.insertSheet('Socios');
+      Logger.log('pestana Socios creada');
+    }
+
+    // Auto-crear cabeceras si la pestana esta vacia
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(['NumSocio', 'Nombre', 'PIN', 'PueblosHabituales', 'Activo']);
+      Logger.log('cabeceras creadas');
+    }
+
+    const numSocio = String(body.numSocio || '').trim();
+    const nombre = String(body.nombre || '').trim();
+    const pin = String(body.pin || '');
+    const pueblosHabituales = String(body.pueblosHabituales || '');
+    const activo = String(body.activo || 'Si');
+
+    if (!numSocio || !nombre) {
+      Logger.log('error: missing numSocio or nombre');
+      return jsonResponse({ error: 'missing_numSocio_or_nombre' }, 400);
+    }
+
+    // Buscar socio existente por numSocio
+    const data = sheet.getDataRange().getValues();
+    let existingRow = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === numSocio) {
+        existingRow = i + 1; // 1-indexed
+        break;
+      }
+    }
+
+    const row = [numSocio, nombre, pin, pueblosHabituales, activo];
+
+    if (existingRow > 0) {
+      sheet.getRange(existingRow, 1, 1, 5).setValues([row]);
+      Logger.log('socio actualizado fila=' + existingRow);
+      return jsonResponse({ status: 'ok', action: 'updated', numSocio: numSocio });
+    } else {
+      sheet.appendRow(row);
+      Logger.log('socio creado fila=' + sheet.getLastRow());
+      return jsonResponse({ status: 'ok', action: 'created', numSocio: numSocio });
+    }
+  } catch (err) {
+    Logger.log('ERROR crearSocio: ' + String(err));
+    return jsonResponse({ error: String(err) }, 500);
+  }
 }
 
 // ============================================================
