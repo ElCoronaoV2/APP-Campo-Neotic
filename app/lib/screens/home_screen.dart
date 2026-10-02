@@ -2,21 +2,56 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../services/auth_service.dart';
+import '../services/speech_service.dart';
+import '../services/tts_service.dart';
+import 'cuestionario_screen.dart';
 import 'login_screen.dart';
 
-/// Pantalla placeholder para Fase 2. La funcionalidad del cuestionario
-/// llega en Fases 3-7. Muestra saludo personalizado + logout funcional.
-class HomeScreen extends StatelessWidget {
+/// Pantalla de inicio tras el login.
+class HomeScreen extends StatefulWidget {
   final Socio socio;
   final AuthService auth;
 
   const HomeScreen({super.key, required this.socio, required this.auth});
 
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final SpeechService _speech = SpeechService();
+  final TtsService _tts = TtsService();
+  bool _iniciando = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _iniciar();
+  }
+
+  Future<void> _iniciar() async {
+    await _speech.init();
+    await _tts.init();
+    if (mounted) setState(() => _iniciando = false);
+  }
+
   Future<void> _logout(BuildContext context) async {
-    await auth.logout();
+    await widget.auth.logout();
     if (!context.mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => LoginScreen(auth: auth)),
+      MaterialPageRoute(builder: (_) => LoginScreen(auth: widget.auth)),
+    );
+  }
+
+  void _iniciarCuestionario(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CuestionarioScreen(
+          socio: widget.socio,
+          speech: _speech,
+          tts: _tts,
+        ),
+      ),
     );
   }
 
@@ -37,40 +72,35 @@ class HomeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Hola, ${socio.nombre}',
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Sesión iniciada correctamente.',
-                  style: TextStyle(fontSize: 16, color: Colors.black54),
+                  'Hola, \${widget.socio.nombre}',
+                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Socio nº ${socio.numSocio}',
+                  'Socio nº \${widget.socio.numSocio}',
                   style: const TextStyle(fontSize: 14, color: Colors.black45),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 48),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: const [
-                        Icon(Icons.rocket_launch,
-                            size: 48, color: Colors.black38),
-                        SizedBox(height: 12),
-                        Text(
-                          'El cuestionario estará disponible\nen la próxima fase (Fase 3).',
-                          style: TextStyle(fontSize: 16),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                SizedBox(
+                  height: 72,
+                  child: ElevatedButton.icon(
+                    onPressed: _iniciando ? null : () => _iniciarCuestionario(context),
+                    icon: _iniciando
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.mic, size: 32),
+                    label: Text(
+                      _iniciando ? 'Iniciando micrófono…' : 'EMPEZAR CUESTIONARIO',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2E7D32),
+                      foregroundColor: Colors.white,
                     ),
                   ),
                 ),
@@ -82,10 +112,7 @@ class HomeScreen extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red.shade700,
                       foregroundColor: Colors.white,
-                      textStyle: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     child: const Text('CERRAR SESIÓN'),
                   ),
