@@ -1,0 +1,90 @@
+name: Build and Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'        # se dispara con: git tag v1.0.4 && git push origin v1.0.4
+  workflow_dispatch:  # también manualmente desde la pestaña Actions
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.5'
+          channel: stable
+          cache: true
+
+      # Inyecta el tag actual (ej. "v1.0.4") como build name en pubspec.yaml
+      # para que cada release tenga su APK con número de versión único.
+      - name: Bump version in pubspec.yaml
+        run: |
+          set -e
+          TAG="${GITHUB_REF#refs/tags/}"   # "v1.0.4" o "" si manual
+          if [ -z "$TAG" ] || [ "$TAG" = "" ]; then
+            TAG="v1.0.${{ github.run_number }}"
+          fi
+          VERSION="${TAG#v}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          sed -i "s/^version: .*/version: $VERSION+1/" app/pubspec.yaml
+          echo "pubspec.yaml version bumped to $VERSION"
+          cat app/pubspec.yaml | head -3
+
+      - name: Flutter pub get
+        working-directory: app
+        run: flutter pub get
+
+      - name: Flutter analyze
+        working-directory: app
+        run: flutter analyze
+
+      - name: Build APK (release, unsigned debug para piloto)
+        working-directory: app
+        run: flutter build apk --release
+
+      - name: Rename APK
+        run: |
+          cd app/build/app/outputs/flutter-apk
+          mv app-release.apk voz-campo-${VERSION}.apk
+          ls -lh
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: 'Voz del Campo ${{ env.VERSION }}'
+          body: |
+            ## Voz del Campo ${{ env.VERSION }}
+
+            APK debug-ready para instalar en dispositivos Android.
+
+            **Instalación:**
+            1. Descarga `voz-campo-${{ env.VERSION }}.apk` abajo
+            2. Transfiérelo al móvil (USB, Drive, WhatsApp, email)
+            3. En el móvil: Ajustes → Permisos especiales → Instalar apps desconocidas → permitir
+            4. Abre el APK desde el explorador y acepta instalar
+            5. La propia app detectará la actualización en el siguiente arranque
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: voz-campo-${{ env.VERSION }}.apk
+          path: app/build/app/outputs/flutter-apk/voz-campo-${{ env.VERSION }}.apk
+          if-no-files-found: error
