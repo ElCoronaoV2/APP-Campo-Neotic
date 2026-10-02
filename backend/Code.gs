@@ -70,6 +70,8 @@ function doGet(e) {
         return buscarSocio(e.parameter.numSocio, e.parameter.pin);
       case 'fincas':
         return listarFincas(e.parameter.numSocio);
+      case 'version':
+        return getVersion();
       case 'debug_socios':
         return debugSocios();
       default:
@@ -245,6 +247,35 @@ function crearSocio(body) {
     Logger.log('ERROR crearSocio: ' + String(err));
     return jsonResponse({ error: String(err) }, 500);
   }
+}
+
+function getVersion() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = ss.getSheetByName('Config');
+  if (!sheet) {
+    // Auto-crear pestaña Config con valores por defecto
+    sheet = ss.insertSheet('Config');
+    sheet.appendRow(['version_actual', 'apk_url']);
+    sheet.appendRow(['1.0.0', '']);
+    return jsonResponse({ version: '1.0.0', apk_url: '' });
+  }
+  const data = sheet.getDataRange().getValues();
+  // Busca fila con clave 'version_actual' o usa fila 2 directamente
+  let version = '';
+  let apkUrl = '';
+  for (let i = 1; i < data.length; i++) {
+    const key = String(data[i][0] || '').toLowerCase().trim();
+    if (key === 'version_actual' || key === '') {
+      // fila de valores (no cabecera)
+      if (i === 1) { version = String(data[i][1] || ''); apkUrl = String(data[i][2] || ''); }
+    }
+  }
+  // Formato alternativo: fila 2 = [version_actual, valor, apk_url, valor]
+  if (!version && data.length >= 2) {
+    version = String(data[1][1] || data[1][0] || '1.0.0');
+    apkUrl  = String(data[1][2] || data[1][1] || '');
+  }
+  return jsonResponse({ version: version || '1.0.0', apk_url: apkUrl });
 }
 
 function debugSocios() {
