@@ -70,6 +70,8 @@ function doGet(e) {
         return buscarSocio(e.parameter.numSocio, e.parameter.pin);
       case 'fincas':
         return listarFincas(e.parameter.numSocio);
+      case 'debug_socios':
+        return debugSocios();
       default:
         return jsonResponse({ error: 'unknown_op', op: op }, 400);
     }
@@ -148,7 +150,7 @@ function buscarSocio(numSocio, pin) {
   if (data.length < 2) return jsonResponse({ found: false });
 
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(numSocio)) {
+    if (String(data[i][0]).replace(/^0+/, '') === String(numSocio).replace(/^0+/, '')) {
       const socio = {
         numSocio: data[i][0],
         nombre: data[i][1],
@@ -242,6 +244,30 @@ function crearSocio(body) {
   } catch (err) {
     Logger.log('ERROR crearSocio: ' + String(err));
     return jsonResponse({ error: String(err) }, 500);
+  }
+}
+
+function debugSocios() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheets = ss.getSheets().map(function(s) { return s.getName(); });
+  Logger.log('Pestanas encontradas: ' + JSON.stringify(sheets));
+  const sheet = ss.getSheetByName('Socios');
+  if (!sheet) {
+    Logger.log('ERROR: pestana Socios no existe');
+    return;
+  }
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  Logger.log('lastRow=' + lastRow + ' lastCol=' + lastCol);
+  if (lastRow > 0) {
+    const maxR = Math.min(lastRow, 5);
+    const maxC = Math.max(lastCol, 5);
+    const data = sheet.getRange(1, 1, maxR, maxC).getValues();
+    for (var i = 0; i < data.length; i++) {
+      Logger.log('Fila ' + (i+1) + ': ' + JSON.stringify(data[i]));
+    }
+  } else {
+    Logger.log('La pestana Socios esta vacia (0 filas)');
   }
 }
 
