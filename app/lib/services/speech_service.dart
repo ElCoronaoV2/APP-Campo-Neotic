@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:speech_to_text/speech_recognition_error.dart';
 
@@ -10,42 +11,49 @@ class SpeechResult {
 }
 
 /// Estados posibles del servicio de voz.
-enum SpeechStatus { notInitialized, ready, listening, stopping, unavailable }
+enum SpeechStatus { notInitialized, ready, listening, stopping, unavailable, permissionDenied }
 
 /// Servicio de reconocimiento de voz (speech_to_text).
 ///
 /// Uso:
-///   1. await init()          — una sola vez al arrancar la app
-///   2. await listen(...)     — inicia escucha; callback onResult con cada resultado
-///   3. await stop()          — detiene la escucha manualmente
+///   1. await init()      — pide permiso y prepara el motor (una vez)
+///   2. await listen(...) — inicia escucha
+///   3. await stop()      — detiene la escucha
 class SpeechService {
   final SpeechToText _stt = SpeechToText();
   SpeechStatus status = SpeechStatus.notInitialized;
   String? lastError;
 
-  // Locales preferidos en orden (es_ES primero, ca_ES valenciano como fallback)
-  static const List<String> _preferredLocales = ['es_ES', 'ca_ES', 'es-ES', 'ca-ES'];
+  static const List<String> _preferredLocales = [
+    'es_ES', 'ca_ES', 'es-ES', 'ca-ES'
+  ];
 
-  /// Inicializa el motor. Devuelve true si está disponible.
-  /// Debe llamarse en initState(), una sola vez.
+  /// Inicializa el motor pidiendo permiso de micrófono primero.
+  /// Devuelve true si está listo para grabar.
   Future<bool> init() async {
+    // 1. Pedir permiso de micrófono
+    final permStatus = await Permission.microphone.request();
+    if (!permStatus.isGranted) {
+      status = SpeechStatus.permissionDenied;
+      lastError = 'Permiso de micrófono denegado';
+      return false;
+    }
+
+    // 2. Inicializar speech_to_text
     final available = await _stt.initialize(
       onError: _onError,
       onStatus: _onStatus,
       debugLogging: kDebugMode,
     );
     status = available ? SpeechStatus.ready : SpeechStatus.unavailable;
+    if (!available) lastError = 'Reconocimiento de voz no disponible en este dispositivo';
     return available;
   }
 
   bool get isListening => _stt.isListening;
   bool get isReady => status == SpeechStatus.ready || status == SpeechStatus.stopping;
+  bool get isPermissionDenied => status == SpeechStatus.permissionDenied;
 
-  /// Inicia una sesión de escucha.
-  ///
-  /// [onResult] — llamado con cada resultado (parcial o final).
-  /// [phraseHints] — lista de palabras esperadas para mejorar el reconocimiento
-  ///                 (ej: nombres de pueblos para el campo de municipio).
   Future<void> listen({
     required void Function(SpeechResult result) onResult,
     List<String> phraseHints = const [],
@@ -70,13 +78,11 @@ class SpeechService {
     );
   }
 
-  /// Detiene la escucha activa.
   Future<void> stop() async {
     await _stt.stop();
     status = SpeechStatus.ready;
   }
 
-  /// Cancela sin emitir resultado final.
   Future<void> cancel() async {
     await _stt.cancel();
     status = SpeechStatus.ready;
@@ -95,7 +101,6 @@ class SpeechService {
     }
   }
 
-  /// Intenta usar es_ES; si no está disponible cae al siguiente preferido.
   Future<String?> _resolveLocale() async {
     try {
       final locales = await _stt.locales();
@@ -104,6 +109,6 @@ class SpeechService {
         if (available.contains(pref)) return pref;
       }
     } catch (_) {}
-    return null; // usa el locale del sistema
+    return null;
   }
 }
